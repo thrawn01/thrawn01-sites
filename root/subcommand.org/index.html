@@ -1,0 +1,645 @@
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN"
+  "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd">
+
+
+<html xmlns="http://www.w3.org/1999/xhtml">
+  <head>
+    <meta http-equiv="Content-Type" content="text/html; charset=utf-8" />
+    
+    <title>SubCommand CLI Parser &mdash; SubCommand 1.0 documentation</title>
+    
+    <link rel="stylesheet" href="_static/alabaster.css" type="text/css" />
+    <link rel="stylesheet" href="_static/pygments.css" type="text/css" />
+    
+    <script type="text/javascript">
+      var DOCUMENTATION_OPTIONS = {
+        URL_ROOT:    './',
+        VERSION:     '1.0',
+        COLLAPSE_INDEX: false,
+        FILE_SUFFIX: '.html',
+        HAS_SOURCE:  true
+      };
+    </script>
+    <script type="text/javascript" src="_static/jquery.js"></script>
+    <script type="text/javascript" src="_static/underscore.js"></script>
+    <script type="text/javascript" src="_static/doctools.js"></script>
+    <link rel="top" title="SubCommand 1.0 documentation" href="#" />
+   
+  
+  <meta name="viewport" content="width=device-width, initial-scale=0.9, maximum-scale=0.9">
+
+  </head>
+  <body role="document">  
+
+    <div class="document">
+      <div class="documentwrapper">
+        <div class="bodywrapper">
+          <div class="body" role="main">
+            
+  <div class="section" id="subcommand-cli-parser">
+<span id="index"></span><h1>SubCommand CLI Parser<a class="headerlink" href="#subcommand-cli-parser" title="Permalink to this headline">¶</a></h1>
+<p>SubCommand is a simple and concise SubCommand parser to assist CLI developers
+in creating relatively complex sub commands.</p>
+<p>The SubCommand project fits into a single file, which is less than 500 lines.
+The interface consists of 3 Classes and a few decorators and that is it.</p>
+<p><strong>Doesn&#8217;t argparse already support sub commands?</strong></p>
+<p>I does, but in practice it can be quite complex and it makes keeping the args
+and the subcommands together and easily reasoned about difficult in large CLI
+code bases.</p>
+<p><strong>Doesn&#8217;t project X already do this?</strong></p>
+<p>There are several projects that attempt to solve the sub command problem.</p>
+<ul class="simple">
+<li><em>Plumbum</em> - <a class="reference external" href="http://plumbum.readthedocs.org/en/latest/cli.html">http://plumbum.readthedocs.org/en/latest/cli.html</a></li>
+<li><em>Click</em> - <a class="reference external" href="http://click.pocoo.org">http://click.pocoo.org</a></li>
+<li><em>Cliff</em> - <a class="reference external" href="http://docs.openstack.org/developer/cliff">http://docs.openstack.org/developer/cliff</a></li>
+</ul>
+<p>When I originally wrote <cite>SubCommand</cite> none of these projects existed, and even
+now none of them are as small and simple to use as SubCommand. IMHO =)</p>
+<p>In fact <cite>SubCommand</cite> is so small you can easily copy single .py module into your
+own project to avoid carrying around yet another external dependency.</p>
+<div class="section" id="installation">
+<h2>Installation<a class="headerlink" href="#installation" title="Permalink to this headline">¶</a></h2>
+<p>Install via pip:</p>
+<div class="highlight-python"><div class="highlight"><pre>$ pip install cli-subcommand
+</pre></div>
+</div>
+<p>Source is available here <a class="reference external" href="http://github.com/thrawn01/subcommand">http://github.com/thrawn01/subcommand</a></p>
+</div>
+<div class="section" id="what-does-it-look-like">
+<h2>What does it look like?<a class="headerlink" href="#what-does-it-look-like" title="Permalink to this headline">¶</a></h2>
+<p>Here is simple example:</p>
+<div class="highlight-python"><div class="highlight"><pre><span class="kn">from</span> <span class="nn">subcommand</span> <span class="kn">import</span> <span class="n">opt</span><span class="p">,</span> <span class="n">noargs</span>
+<span class="kn">import</span> <span class="nn">subcommand</span>
+<span class="kn">import</span> <span class="nn">sys</span>
+
+<span class="k">class</span> <span class="nc">TestCommands</span><span class="p">(</span><span class="n">subcommand</span><span class="o">.</span><span class="n">Commands</span><span class="p">):</span>
+
+    <span class="k">def</span> <span class="nf">__init__</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+        <span class="n">subcommand</span><span class="o">.</span><span class="n">Commands</span><span class="o">.</span><span class="n">__init__</span><span class="p">(</span><span class="bp">self</span><span class="p">)</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">opt</span><span class="p">(</span><span class="s">&#39;-d&#39;</span><span class="p">,</span> <span class="s">&#39;--debug&#39;</span><span class="p">,</span> <span class="n">action</span><span class="o">=</span><span class="s">&#39;store_const&#39;</span><span class="p">,</span>
+                 <span class="n">const</span><span class="o">=</span><span class="bp">True</span><span class="p">,</span> <span class="n">default</span><span class="o">=</span><span class="bp">False</span><span class="p">,</span> <span class="n">help</span><span class="o">=</span><span class="s">&quot;Output debug&quot;</span><span class="p">)</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">count</span> <span class="o">=</span> <span class="mi">0</span>
+
+    <span class="nd">@opt</span><span class="p">(</span><span class="s">&#39;--count&#39;</span><span class="p">,</span> <span class="n">default</span><span class="o">=</span><span class="mi">1</span><span class="p">,</span> <span class="nb">type</span><span class="o">=</span><span class="nb">int</span><span class="p">,</span> <span class="n">help</span><span class="o">=</span><span class="s">&quot;Num of Hello&#39;s&quot;</span><span class="p">)</span>
+    <span class="nd">@opt</span><span class="p">(</span><span class="s">&#39;name&#39;</span><span class="p">,</span> <span class="n">help</span><span class="o">=</span><span class="s">&quot;Your name&quot;</span><span class="p">)</span>
+    <span class="k">def</span> <span class="nf">hello</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">name</span><span class="p">,</span> <span class="n">count</span><span class="o">=</span><span class="mi">1</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot; Docstring for hello &quot;&quot;&quot;</span>
+        <span class="k">for</span> <span class="n">x</span> <span class="ow">in</span> <span class="nb">range</span><span class="p">(</span><span class="n">count</span><span class="p">):</span>
+            <span class="k">print</span><span class="p">(</span><span class="s">&#39;Hello, </span><span class="si">%s</span><span class="s">&#39;</span> <span class="o">%</span> <span class="n">name</span><span class="p">)</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">count</span> <span class="o">+=</span> <span class="mi">1</span>
+        <span class="k">return</span> <span class="mi">0</span>
+
+    <span class="nd">@noargs</span>
+    <span class="k">def</span> <span class="nf">return_non_zero</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+        <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">debug</span><span class="p">:</span>
+            <span class="k">print</span><span class="p">(</span><span class="s">&#39;Exit with non-zero status&#39;</span><span class="p">)</span>
+        <span class="k">return</span> <span class="mi">1</span>
+
+<span class="k">if</span> <span class="n">__name__</span> <span class="o">==</span> <span class="s">&quot;__main__&quot;</span><span class="p">:</span>
+    <span class="n">parser</span> <span class="o">=</span> <span class="n">subcommand</span><span class="o">.</span><span class="n">Parser</span><span class="p">([</span><span class="n">TestCommands</span><span class="p">()],</span>
+                               <span class="n">desc</span><span class="o">=</span><span class="s">&#39;Test Application&#39;</span><span class="p">)</span>
+    <span class="n">sys</span><span class="o">.</span><span class="n">exit</span><span class="p">(</span><span class="n">parser</span><span class="o">.</span><span class="n">run</span><span class="p">())</span>
+</pre></div>
+</div>
+<p>It looks like this when run:</p>
+<div class="highlight-python"><div class="highlight"><pre>$ python hello.py hello derrick --count 5
+Hello, derrick
+Hello, derrick
+Hello, derrick
+Hello, derrick
+Hello, derrick
+$ echo $?
+</pre></div>
+</div>
+<p>What it looks like when you pass no arguments:</p>
+<div class="highlight-python"><div class="highlight"><pre>$ python hello.py
+Usage: hello.py &lt;command&gt; [-h]
+
+Test Application
+
+Available Commands:
+   return-non-zero
+   hello
+</pre></div>
+</div>
+<p>What it looks like when you ask for <cite>hello -h</cite>:</p>
+<div class="highlight-python"><div class="highlight"><pre>$ python hello.py hello -h
+usage: hello [-h] [--count COUNT] [-d] name
+
+Docstring for hello
+
+positional arguments:
+  name           Your name
+
+optional arguments:
+  -h, --help     show this help message and exit
+  --count COUNT  Num of Hello&#39;s
+  -d, --debug    Output debug
+</pre></div>
+</div>
+</div>
+<div class="section" id="can-my-commands-have-subcommands">
+<h2>Can my commands have subcommands?<a class="headerlink" href="#can-my-commands-have-subcommands" title="Permalink to this headline">¶</a></h2>
+<p>In order to use subcommands you must use the
+<a class="reference internal" href="#subcommand.SubParser" title="subcommand.SubParser"><code class="xref py py-class docutils literal"><span class="pre">subcommand.SubParser</span></code></a> Class to parse your
+<a class="reference internal" href="#subcommand.Commands" title="subcommand.Commands"><code class="xref py py-class docutils literal"><span class="pre">subcommand.Commands</span></code></a> objects. In addition you must
+give your <cite>Commands</cite> object a name by giving it the <strong>_name</strong> attribute.</p>
+<p>Example:</p>
+<div class="highlight-python"><div class="highlight"><pre><span class="kn">from</span> <span class="nn">subcommand</span> <span class="kn">import</span> <span class="n">opt</span><span class="p">,</span> <span class="n">noargs</span>
+<span class="kn">import</span> <span class="nn">subcommand</span>
+<span class="kn">import</span> <span class="nn">sys</span>
+
+<span class="k">class</span> <span class="nc">BaseCommands</span><span class="p">(</span><span class="n">subcommand</span><span class="o">.</span><span class="n">Commands</span><span class="p">):</span>
+    <span class="k">def</span> <span class="nf">pre_command</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">client</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">client_factory</span><span class="p">()</span>
+
+<span class="k">class</span> <span class="nc">TicketCommands</span><span class="p">(</span><span class="n">BaseCommands</span><span class="p">):</span>
+    <span class="sd">&quot;&quot;&quot; Ticket SubCommand Docs &quot;&quot;&quot;</span>
+    <span class="n">_name</span> <span class="o">=</span> <span class="s">&#39;tickets&#39;</span>
+    <span class="nd">@opt</span><span class="p">(</span><span class="s">&#39;tkt-num&#39;</span><span class="p">,</span> <span class="n">help</span><span class="o">=</span><span class="s">&quot;tkt number to get&quot;</span><span class="p">)</span>
+    <span class="k">def</span> <span class="nf">get</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">tkt_num</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot; Get Ticket docstring &quot;&quot;&quot;</span>
+        <span class="k">print</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">client</span><span class="o">.</span><span class="n">get_ticket</span><span class="p">(</span><span class="n">tkt_num</span><span class="p">))</span>
+
+<span class="k">class</span> <span class="nc">QueueCommands</span><span class="p">(</span><span class="n">BaseCommands</span><span class="p">):</span>
+    <span class="sd">&quot;&quot;&quot; Queue SubCommand Docs &quot;&quot;&quot;</span>
+    <span class="n">_name</span> <span class="o">=</span> <span class="s">&#39;queues&#39;</span>
+    <span class="nd">@opt</span><span class="p">(</span><span class="s">&#39;queue-num&#39;</span><span class="p">,</span> <span class="n">help</span><span class="o">=</span><span class="s">&quot;queue to get&quot;</span><span class="p">)</span>
+    <span class="k">def</span> <span class="nf">get</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">queue_num</span><span class="p">):</span>
+        <span class="k">print</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">client</span><span class="o">.</span><span class="n">get_queue</span><span class="p">(</span><span class="n">queue_num</span><span class="p">))</span>
+
+<span class="k">if</span> <span class="n">__name__</span> <span class="o">==</span> <span class="s">&quot;__main__&quot;</span><span class="p">:</span>
+    <span class="n">parser</span> <span class="o">=</span> <span class="n">subcommand</span><span class="o">.</span><span class="n">SubParser</span><span class="p">([</span><span class="n">TicketCommands</span><span class="p">(),</span>
+                                   <span class="n">QueueCommands</span><span class="p">()],</span>
+                                  <span class="n">desc</span><span class="o">=</span><span class="s">&#39;Ticket Client&#39;</span><span class="p">)</span>
+    <span class="n">sys</span><span class="o">.</span><span class="n">exit</span><span class="p">(</span><span class="n">parser</span><span class="o">.</span><span class="n">run</span><span class="p">())</span>
+</pre></div>
+</div>
+<p>What it looks like when you run it:</p>
+<div class="highlight-python"><div class="highlight"><pre>$ python hello.py
+Usage: hello.py &lt;command&gt; [-h]
+
+Ticket Client
+
+Available Commands:
+   tickets
+   queues
+</pre></div>
+</div>
+<p>When you run the subcommands:</p>
+<div class="highlight-python"><div class="highlight"><pre>$ python hello.py tickets
+Usage: hello.py tickets &lt;command&gt; [-h]
+
+Ticket SubCommand Docs
+
+Available Commands:
+   get
+</pre></div>
+</div>
+<p>Getting help from the sub command:</p>
+<div class="highlight-python"><div class="highlight"><pre>$ python hello.py tickets get -h
+usage: get [-h] tkt-num
+
+Get Ticket docstring
+
+positional arguments:
+  tkt-num     tkt number to get
+
+optional arguments:
+  -h, --help  show this help message and exit
+</pre></div>
+</div>
+</div>
+<div class="section" id="what-if-i-have-lots-of-arguments">
+<h2>What if I have lots of arguments?<a class="headerlink" href="#what-if-i-have-lots-of-arguments" title="Permalink to this headline">¶</a></h2>
+<p>If you have a command with a ton of command line arguments, and don&#8217;t really
+want to specify each in the method signature you can specify a single argument
+called <strong>args</strong> and SubCommand will detect this and pass in all the arguments
+as a list.</p>
+<p>Here is an example of a CLI interface to a ticketing system:</p>
+<div class="highlight-python"><div class="highlight"><pre><span class="k">class</span> <span class="nc">TicketCommands</span><span class="p">(</span><span class="n">Commands</span><span class="p">):</span>
+    <span class="k">def</span> <span class="nf">__init__</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+        <span class="n">SubCommand</span><span class="o">.</span><span class="n">__init__</span><span class="p">(</span><span class="bp">self</span><span class="p">)</span>
+        <span class="c"># Add debug option to all commands (creates self.debug)</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">opt</span><span class="p">(</span><span class="s">&#39;-d&#39;</span><span class="p">,</span> <span class="s">&#39;--debug&#39;</span><span class="p">,</span> <span class="n">action</span><span class="o">=</span><span class="s">&#39;store_const&#39;</span><span class="p">,</span>
+                 <span class="n">const</span><span class="o">=</span><span class="bp">True</span><span class="p">,</span> <span class="n">default</span><span class="o">=</span><span class="bp">False</span><span class="p">,</span>
+                 <span class="n">help</span><span class="o">=</span><span class="s">&quot;print server requests and responses&quot;</span><span class="p">)</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">opt</span><span class="p">(</span><span class="s">&#39;-U&#39;</span><span class="p">,</span> <span class="s">&#39;--url&#39;</span><span class="p">,</span> <span class="n">default</span><span class="o">=</span><span class="bp">None</span><span class="p">,</span>
+                 <span class="n">help</span><span class="o">=</span><span class="s">&quot;URL to our ticketing rest api&quot;</span><span class="p">)</span>
+
+    <span class="nd">@opt</span><span class="p">(</span><span class="s">&#39;-c&#39;</span><span class="p">,</span> <span class="s">&#39;--classification&#39;</span><span class="p">,</span> <span class="nb">type</span><span class="o">=</span><span class="nb">int</span><span class="p">,</span>
+         <span class="n">help</span><span class="o">=</span><span class="s">&quot;Specify the class of this ticket&quot;</span><span class="p">)</span>
+    <span class="nd">@opt</span><span class="p">(</span><span class="s">&#39;text&#39;</span><span class="p">,</span> <span class="n">help</span><span class="o">=</span><span class="s">&quot;Body of the ticket&quot;</span><span class="p">)</span>
+    <span class="nd">@opt</span><span class="p">(</span><span class="s">&#39;subject&#39;</span><span class="p">,</span> <span class="n">help</span><span class="o">=</span><span class="s">&quot;Subject of the ticket&quot;</span><span class="p">)</span>
+    <span class="nd">@opt</span><span class="p">(</span><span class="s">&#39;severity&#39;</span><span class="p">,</span> <span class="nb">type</span><span class="o">=</span><span class="nb">int</span><span class="p">,</span> <span class="n">help</span><span class="o">=</span><span class="s">&quot;Tkt severity level&quot;</span><span class="p">)</span>
+    <span class="nd">@opt</span><span class="p">(</span><span class="s">&#39;subcategory&#39;</span><span class="p">,</span> <span class="n">help</span><span class="o">=</span><span class="s">&quot;The subcategory&quot;</span><span class="p">)</span>
+    <span class="nd">@opt</span><span class="p">(</span><span class="s">&#39;queue-name&#39;</span><span class="p">,</span> <span class="n">help</span><span class="o">=</span><span class="s">&quot;Name of the queue&quot;</span><span class="p">)</span>
+    <span class="k">def</span> <span class="nf">add_ticket</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">args</span><span class="p">):</span>
+        <span class="n">client</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">ticket_factory</span><span class="p">()</span>
+        <span class="c"># Remove --url and --debug</span>
+        <span class="n">args</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">remove</span><span class="p">(</span><span class="n">args</span><span class="p">,</span> <span class="p">[</span><span class="s">&#39;url&#39;</span><span class="p">,</span> <span class="s">&#39;debug&#39;</span><span class="p">])</span>
+        <span class="c"># The ticket client requires some args to</span>
+        <span class="c"># be optional so we split them here</span>
+        <span class="n">args</span><span class="p">,</span> <span class="n">kwargs</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">split</span><span class="p">(</span><span class="n">args</span><span class="p">,</span> <span class="p">[</span><span class="s">&#39;queue_name&#39;</span><span class="p">,</span>
+                <span class="s">&#39;subcategory&#39;</span><span class="p">,</span> <span class="s">&#39;source&#39;</span><span class="p">,</span> <span class="s">&#39;severity&#39;</span><span class="p">,</span>
+                <span class="s">&#39;subject&#39;</span><span class="p">,</span> <span class="s">&#39;text&#39;</span><span class="p">])</span>
+        <span class="n">resp</span> <span class="o">=</span> <span class="n">client</span><span class="o">.</span><span class="n">add_ticket</span><span class="p">(</span><span class="n">args</span><span class="p">[</span><span class="s">&#39;queue_name&#39;</span><span class="p">],</span>
+                                 <span class="n">args</span><span class="p">[</span><span class="s">&#39;subcategory&#39;</span><span class="p">],</span>
+                                 <span class="n">args</span><span class="p">[</span><span class="s">&#39;source&#39;</span><span class="p">],</span>
+                                 <span class="n">args</span><span class="p">[</span><span class="s">&#39;severity&#39;</span><span class="p">],</span>
+                                 <span class="n">args</span><span class="p">[</span><span class="s">&#39;subject&#39;</span><span class="p">],</span>
+                                 <span class="n">args</span><span class="p">[</span><span class="s">&#39;text&#39;</span><span class="p">],</span> <span class="o">**</span><span class="n">kwargs</span><span class="p">)</span>
+        <span class="k">print</span><span class="p">(</span><span class="n">resp</span><span class="o">.</span><span class="n">to_json</span><span class="p">())</span>
+</pre></div>
+</div>
+</div>
+<div class="section" id="can-i-share-options-amongst-similar-commands">
+<h2>Can I share options amongst similar commands?<a class="headerlink" href="#can-i-share-options-amongst-similar-commands" title="Permalink to this headline">¶</a></h2>
+<p>Global options can be specified within the constructor by using the
+<a class="reference internal" href="#subcommand.Commands.opt" title="subcommand.Commands.opt"><code class="xref py py-meth docutils literal"><span class="pre">subcommand.Commands.opt</span></code></a> method, and then accessed via <strong>self</strong></p>
+<p>In our ticket client example above here is how to share the &#8211;debug and &#8211;url options:</p>
+<div class="highlight-python"><div class="highlight"><pre><span class="k">class</span> <span class="nc">TicketCommands</span><span class="p">(</span><span class="n">Commands</span><span class="p">):</span>
+    <span class="k">def</span> <span class="nf">__init__</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+        <span class="n">SubCommand</span><span class="o">.</span><span class="n">__init__</span><span class="p">(</span><span class="bp">self</span><span class="p">)</span>
+        <span class="c"># Add debug option to all commands (creates self.debug)</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">opt</span><span class="p">(</span><span class="s">&#39;-d&#39;</span><span class="p">,</span> <span class="s">&#39;--debug&#39;</span><span class="p">,</span> <span class="n">action</span><span class="o">=</span><span class="s">&#39;store_const&#39;</span><span class="p">,</span>
+                 <span class="n">const</span><span class="o">=</span><span class="bp">True</span><span class="p">,</span> <span class="n">default</span><span class="o">=</span><span class="bp">False</span><span class="p">,</span>
+                 <span class="n">help</span><span class="o">=</span><span class="s">&quot;print server requests and responses&quot;</span><span class="p">)</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">opt</span><span class="p">(</span><span class="s">&#39;-U&#39;</span><span class="p">,</span> <span class="s">&#39;--url&#39;</span><span class="p">,</span> <span class="n">default</span><span class="o">=</span><span class="bp">None</span><span class="p">,</span>
+                 <span class="n">help</span><span class="o">=</span><span class="s">&quot;URL to our ticketing rest api&quot;</span><span class="p">)</span>
+
+    <span class="nd">@noargs</span>
+    <span class="k">def</span> <span class="nf">ticket_cmd1</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+        <span class="k">print</span><span class="p">(</span><span class="s">&quot;called ticket_cmd1&quot;</span><span class="p">)</span>
+        <span class="k">print</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">debug</span><span class="p">)</span>
+        <span class="k">print</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">url</span><span class="p">)</span>
+
+    <span class="nd">@noargs</span>
+    <span class="k">def</span> <span class="nf">ticket_cmd2</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+        <span class="k">print</span><span class="p">(</span><span class="s">&quot;called ticket_cmd2&quot;</span><span class="p">)</span>
+        <span class="k">print</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">debug</span><span class="p">)</span>
+        <span class="k">print</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">url</span><span class="p">)</span>
+</pre></div>
+</div>
+</div>
+<div class="section" id="can-i-execute-common-code-before-each-command">
+<h2>Can I execute common code before each command?<a class="headerlink" href="#can-i-execute-common-code-before-each-command" title="Permalink to this headline">¶</a></h2>
+<p>You can define a pre_command method which will get executed before a command is run</p>
+<p>To further our ticket example:</p>
+<div class="highlight-python"><div class="highlight"><pre><span class="k">class</span> <span class="nc">TicketCommands</span><span class="p">(</span><span class="n">Commands</span><span class="p">):</span>
+    <span class="k">def</span> <span class="nf">pre_command</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">client</span> <span class="o">=</span> <span class="n">ticket</span><span class="o">.</span><span class="n">client_factory</span><span class="p">()</span>
+
+    <span class="nd">@opt</span><span class="p">(</span><span class="s">&#39;tkt-num&#39;</span><span class="p">,</span> <span class="n">help</span><span class="o">=</span><span class="s">&quot;tkt number to get&quot;</span><span class="p">)</span>
+    <span class="k">def</span> <span class="nf">get_ticket</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">tkt_num</span><span class="p">):</span>
+        <span class="k">print</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">client</span><span class="o">.</span><span class="n">get_ticket</span><span class="p">(</span><span class="n">tkt_num</span><span class="p">))</span>
+
+    <span class="nd">@opt</span><span class="p">(</span><span class="s">&#39;tkt-num&#39;</span><span class="p">,</span> <span class="n">help</span><span class="o">=</span><span class="s">&quot;tkt number to delete&quot;</span><span class="p">)</span>
+    <span class="k">def</span> <span class="nf">delete_ticket</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+        <span class="k">print</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">client</span><span class="o">.</span><span class="n">delete_ticket</span><span class="p">(</span><span class="n">tkt_num</span><span class="p">))</span>
+</pre></div>
+</div>
+</div>
+<div class="section" id="does-subcommand-provide-bash-completion">
+<h2>Does SubCommand provide bash completion?<a class="headerlink" href="#does-subcommand-provide-bash-completion" title="Permalink to this headline">¶</a></h2>
+<p>Once you have created your CLI with SubCommand you can generate a bash
+completion script on ubuntu by running the following:</p>
+<div class="highlight-python"><div class="highlight"><pre>./my-script.py --bash-completion-script &gt; /etc/bash_completion.d/my-script.py
+</pre></div>
+</div>
+</div>
+</div>
+<div class="section" id="id1">
+<h1>Installation<a class="headerlink" href="#id1" title="Permalink to this headline">¶</a></h1>
+<p>This part of the documentation covers the installation of SubCommand.
+The first step to using any software package is getting it properly installed.</p>
+<div class="section" id="distribute-pip">
+<h2>Distribute &amp; Pip<a class="headerlink" href="#distribute-pip" title="Permalink to this headline">¶</a></h2>
+<p>Installing SubCommand is simple with <a class="reference external" href="https://pip.pypa.io">pip</a>, just run
+this in your terminal:</p>
+<div class="highlight-python"><div class="highlight"><pre>$ pip install git+https://github.com/thrawn01/subcommand.git
+</pre></div>
+</div>
+</div>
+<div class="section" id="get-the-code">
+<h2>Get the Code<a class="headerlink" href="#get-the-code" title="Permalink to this headline">¶</a></h2>
+<p>SubCommand is developed on GitHub, You can find the code
+<a class="reference external" href="https://github.com/thrawn01/subcommand">here</a>.</p>
+<p>Clone the public repository:</p>
+<div class="highlight-python"><div class="highlight"><pre>$ git clone git://github.com/thrawn01/subcommand.git
+</pre></div>
+</div>
+<p>Once you have a copy of the source, you can embed it in your Python package,
+or install it into your site-packages easily:</p>
+<div class="highlight-python"><div class="highlight"><pre>$ python setup.py install
+</pre></div>
+</div>
+</div>
+</div>
+<div class="section" id="module-subcommand">
+<span id="developer-interface"></span><h1>Developer Interface<a class="headerlink" href="#module-subcommand" title="Permalink to this headline">¶</a></h1>
+<p>This part of the documentation covers all the interfaces of SubCommand.</p>
+<div class="section" id="decorators">
+<h2>Decorators<a class="headerlink" href="#decorators" title="Permalink to this headline">¶</a></h2>
+<p><a class="reference internal" href="#subcommand.Commands" title="subcommand.Commands"><code class="xref py py-class docutils literal"><span class="pre">Commands</span></code></a> Methods decorated with these functions indicate the
+method is a command and should be exposed via the command line.</p>
+<dl class="function">
+<dt id="subcommand.opt">
+<code class="descclassname">subcommand.</code><code class="descname">opt</code><span class="sig-paren">(</span><em>*args</em>, <em>**kwargs</em><span class="sig-paren">)</span><a class="reference internal" href="_modules/subcommand.html#opt"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#subcommand.opt" title="Permalink to this definition">¶</a></dt>
+<dd><p>Use this decorator to add options to a sub command method. This
+decorator accepts the same arguments as <a class="reference external" href="https://docs.python.org/3/library/argparse.html#the-add-argument-method">ArgumentParser.add_argument</a></p>
+<div class="highlight-python"><div class="highlight"><pre><span class="gp">&gt;&gt;&gt; </span><span class="nd">@opt</span><span class="p">(</span><span class="s">&#39;--opt-arg&#39;</span><span class="p">,</span> <span class="n">help</span><span class="o">=</span><span class="s">&quot;This is my optional arg&quot;</span><span class="p">)</span>
+<span class="gp">&gt;&gt;&gt; </span><span class="nd">@opt</span><span class="p">(</span><span class="s">&#39;pos-arg&#39;</span><span class="p">,</span> <span class="n">help</span><span class="o">=</span><span class="s">&quot;This is my positional arg&quot;</span><span class="p">)</span>
+<span class="gp">&gt;&gt;&gt; </span><span class="k">def</span> <span class="nf">test_sub_command</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">pos_arg</span><span class="o">=</span><span class="bp">None</span><span class="p">,</span> <span class="n">opt_arg</span><span class="o">=</span><span class="bp">None</span><span class="p">):</span>
+<span class="gp">&gt;&gt;&gt; </span>  <span class="k">print</span><span class="p">(</span><span class="n">pos_arg</span><span class="p">,</span> <span class="n">opt_arg</span><span class="p">)</span>
+</pre></div>
+</div>
+</dd></dl>
+
+<dl class="function">
+<dt id="subcommand.noargs">
+<code class="descclassname">subcommand.</code><code class="descname">noargs</code><span class="sig-paren">(</span><em>method</em><span class="sig-paren">)</span><a class="reference internal" href="_modules/subcommand.html#noargs"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#subcommand.noargs" title="Permalink to this definition">¶</a></dt>
+<dd><p>Use this decorator to denote the sub command has no args</p>
+<div class="highlight-python"><div class="highlight"><pre><span class="gp">&gt;&gt;&gt; </span><span class="nd">@noargs</span>
+<span class="gp">&gt;&gt;&gt; </span><span class="k">def</span> <span class="nf">test_sub_command</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+<span class="gp">&gt;&gt;&gt; </span>    <span class="k">print</span><span class="p">(</span><span class="s">&quot;noargs subcommand&quot;</span><span class="p">)</span>
+</pre></div>
+</div>
+</dd></dl>
+
+</div>
+<div class="section" id="commands-class">
+<h2>Commands Class<a class="headerlink" href="#commands-class" title="Permalink to this headline">¶</a></h2>
+<p>Use this class to define the sub commands to be exposed via the command line.</p>
+<dl class="class">
+<dt id="subcommand.Commands">
+<em class="property">class </em><code class="descclassname">subcommand.</code><code class="descname">Commands</code><a class="reference internal" href="_modules/subcommand.html#Commands"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#subcommand.Commands" title="Permalink to this definition">¶</a></dt>
+<dd><p>This is where you define all the commands that are accessed via the
+command line. Every command object must have a <cite>_name</cite> defined if used by
+the <a class="reference internal" href="#subcommand.SubParser" title="subcommand.SubParser"><code class="xref py py-class docutils literal"><span class="pre">SubParser</span></code></a></p>
+<div class="highlight-python"><div class="highlight"><pre><span class="gp">&gt;&gt;&gt; </span><span class="k">class</span> <span class="nc">TestCommands</span><span class="p">(</span><span class="n">Commands</span><span class="p">):</span>
+<span class="gp">... </span>     <span class="n">_name</span> <span class="o">=</span> <span class="s">&#39;test&#39;</span>
+<span class="gp">... </span>     <span class="nd">@opt</span><span class="p">(</span><span class="s">&#39;pos-arg&#39;</span><span class="p">,</span> <span class="n">help</span><span class="o">=</span><span class="s">&quot;This is my positional arg&quot;</span><span class="p">)</span>
+<span class="gp">... </span>     <span class="nd">@opt</span><span class="p">(</span><span class="s">&#39;--opt-arg&#39;</span><span class="p">,</span> <span class="n">help</span><span class="o">=</span><span class="s">&quot;This is my optional arg&quot;</span><span class="p">)</span>
+<span class="gp">... </span>     <span class="k">def</span> <span class="nf">command1</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">pos_arg</span><span class="o">=</span><span class="bp">None</span><span class="p">,</span> <span class="n">opt_arg</span><span class="o">=</span><span class="bp">None</span><span class="p">):</span>
+<span class="gp">... </span>        <span class="k">print</span><span class="p">(</span><span class="s">&#39;cmd with opts </span><span class="si">%s</span><span class="s">, </span><span class="si">%s</span><span class="s">&#39;</span> <span class="o">%</span> <span class="n">pos_arg</span><span class="p">,</span> <span class="n">opt_arg</span><span class="p">)</span>
+<span class="gp">... </span>     <span class="nd">@noargs</span>
+<span class="gp">... </span>     <span class="k">def</span> <span class="nf">command2</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+<span class="gp">... </span>        <span class="k">print</span><span class="p">(</span><span class="s">&#39;cmd with no args&#39;</span><span class="p">)</span>
+</pre></div>
+</div>
+<dl class="method">
+<dt id="subcommand.Commands.bash_completion">
+<code class="descname">bash_completion</code><span class="sig-paren">(</span><span class="sig-paren">)</span><a class="reference internal" href="_modules/subcommand.html#Commands.bash_completion"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#subcommand.Commands.bash_completion" title="Permalink to this definition">¶</a></dt>
+<dd><p>By default returns all the commands defined for this
+<a class="reference internal" href="#subcommand.Commands" title="subcommand.Commands"><code class="xref py py-class docutils literal"><span class="pre">Commands</span></code></a> object. This method is invoked when &#8211;bash-completion
+is called for a specific subcommand. This can be overidden by the
+implementor to return custom behaivor</p>
+</dd></dl>
+
+<dl class="method">
+<dt id="subcommand.Commands.help">
+<code class="descname">help</code><span class="sig-paren">(</span><span class="sig-paren">)</span><a class="reference internal" href="_modules/subcommand.html#Commands.help"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#subcommand.Commands.help" title="Permalink to this definition">¶</a></dt>
+<dd><p>Print a help message with a list of available commands to choose
+from and return</p>
+</dd></dl>
+
+<dl class="method">
+<dt id="subcommand.Commands.opt">
+<code class="descname">opt</code><span class="sig-paren">(</span><em>*args</em>, <em>**kwargs</em><span class="sig-paren">)</span><a class="reference internal" href="_modules/subcommand.html#Commands.opt"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#subcommand.Commands.opt" title="Permalink to this definition">¶</a></dt>
+<dd><p>Use this method to define <a class="reference internal" href="#subcommand.Commands" title="subcommand.Commands"><code class="xref py py-class docutils literal"><span class="pre">Commands</span></code></a> options that are common to each
+command</p>
+<div class="highlight-python"><div class="highlight"><pre><span class="gp">&gt;&gt;&gt; </span><span class="k">class</span> <span class="nc">TestCommands</span><span class="p">(</span><span class="n">Commands</span><span class="p">):</span>
+<span class="gp">... </span>     <span class="n">_name</span> <span class="o">=</span> <span class="s">&#39;test&#39;</span>
+<span class="gp">... </span>     <span class="k">def</span> <span class="nf">__init__</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+<span class="gp">... </span>        <span class="bp">self</span><span class="o">.</span><span class="n">opt</span><span class="p">(</span><span class="s">&#39;-d&#39;</span><span class="p">,</span> <span class="s">&#39;--debug&#39;</span><span class="p">,</span> <span class="n">action</span><span class="o">=</span><span class="s">&#39;store_const&#39;</span><span class="p">,</span>
+<span class="gp">... </span>                 <span class="n">const</span><span class="o">=</span><span class="bp">True</span><span class="p">,</span> <span class="n">default</span><span class="o">=</span><span class="bp">False</span><span class="p">,</span>
+<span class="gp">... </span>                 <span class="n">help</span><span class="o">=</span><span class="s">&quot;Print debug to stdout&quot;</span><span class="p">)</span>
+<span class="gp">... </span>     <span class="nd">@noargs</span>
+<span class="gp">... </span>     <span class="k">def</span> <span class="nf">command1</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+<span class="gp">... </span>        <span class="k">print</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">debug</span><span class="p">)</span>
+<span class="gp">... </span>     <span class="nd">@noargs</span>
+<span class="gp">... </span>     <span class="k">def</span> <span class="nf">command2</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+<span class="gp">... </span>        <span class="k">print</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">debug</span><span class="p">)</span>
+</pre></div>
+</div>
+</dd></dl>
+
+<dl class="method">
+<dt id="subcommand.Commands.pre_command">
+<code class="descname">pre_command</code><span class="sig-paren">(</span><span class="sig-paren">)</span><a class="reference internal" href="_modules/subcommand.html#Commands.pre_command"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#subcommand.Commands.pre_command" title="Permalink to this definition">¶</a></dt>
+<dd><p>This method is called prior to calling the command specified via the
+command line. Use it to initialize common code within your
+<a class="reference internal" href="#subcommand.Commands" title="subcommand.Commands"><code class="xref py py-class docutils literal"><span class="pre">Commands</span></code></a> object</p>
+<div class="highlight-python"><div class="highlight"><pre><span class="gp">&gt;&gt;&gt; </span><span class="k">class</span> <span class="nc">TestCommands</span><span class="p">(</span><span class="n">Commands</span><span class="p">):</span>
+<span class="gp">... </span>     <span class="n">_name</span> <span class="o">=</span> <span class="s">&#39;test&#39;</span>
+<span class="gp">... </span>     <span class="k">def</span> <span class="nf">pre_command</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+<span class="gp">... </span>        <span class="k">print</span><span class="p">(</span><span class="s">&quot;I get run first&quot;</span><span class="p">)</span>
+<span class="gp">... </span>     <span class="nd">@noargs</span>
+<span class="gp">... </span>     <span class="k">def</span> <span class="nf">command</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+<span class="gp">... </span>        <span class="k">print</span><span class="p">(</span><span class="s">&quot;Run my command&quot;</span><span class="p">)</span>
+<span class="gp">&gt;&gt;&gt; </span><span class="n">parser</span> <span class="o">=</span> <span class="n">SubParser</span><span class="p">([</span><span class="n">TestCommands</span><span class="p">()],</span> <span class="n">desc</span><span class="o">=</span><span class="s">&quot;&quot;</span><span class="p">)</span>
+<span class="gp">&gt;&gt;&gt; </span><span class="n">parser</span><span class="o">.</span><span class="n">run</span><span class="p">([</span><span class="s">&#39;prog&#39;</span><span class="p">,</span> <span class="s">&#39;test&#39;</span><span class="p">,</span> <span class="s">&#39;command&#39;</span><span class="p">])</span>
+<span class="go">I get run first</span>
+<span class="go">Run my command</span>
+</pre></div>
+</div>
+</dd></dl>
+
+<dl class="method">
+<dt id="subcommand.Commands.remove">
+<code class="descname">remove</code><span class="sig-paren">(</span><em>haystack</em>, <em>needles</em><span class="sig-paren">)</span><a class="reference internal" href="_modules/subcommand.html#Commands.remove"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#subcommand.Commands.remove" title="Permalink to this definition">¶</a></dt>
+<dd><p>This method eliminates un-wanted keyword arguments</p>
+<div class="highlight-python"><div class="highlight"><pre><span class="gp">&gt;&gt;&gt; </span><span class="k">if</span> <span class="n">args</span><span class="p">[</span><span class="s">&#39;debug&#39;</span><span class="p">]:</span>
+<span class="gp">&gt;&gt;&gt; </span>    <span class="k">print</span> <span class="s">&quot;print debug output&quot;</span>
+<span class="gp">&gt;&gt;&gt; </span><span class="c"># Remove the debug and verbose keys</span>
+<span class="gp">&gt;&gt;&gt; </span><span class="n">kwargs</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">remove</span><span class="p">(</span><span class="n">args</span><span class="p">,</span> <span class="p">[</span><span class="s">&#39;verbose&#39;</span><span class="p">,</span> <span class="s">&#39;debug&#39;</span><span class="p">])</span>
+<span class="gp">&gt;&gt;&gt; </span><span class="bp">self</span><span class="o">.</span><span class="n">call_some_method</span><span class="p">(</span><span class="o">**</span><span class="n">kwargs</span><span class="p">)</span>
+</pre></div>
+</div>
+</dd></dl>
+
+<dl class="method">
+<dt id="subcommand.Commands.split">
+<code class="descname">split</code><span class="sig-paren">(</span><em>args</em>, <em>positionals</em><span class="sig-paren">)</span><a class="reference internal" href="_modules/subcommand.html#Commands.split"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#subcommand.Commands.split" title="Permalink to this definition">¶</a></dt>
+<dd><p>Splits keys specified into separate lists, this method is commonly
+used to split positional arguments from keyword arguments</p>
+<div class="highlight-python"><div class="highlight"><pre><span class="gp">&gt;&gt;&gt; </span><span class="n">args</span><span class="p">,</span> <span class="n">kwargs</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">split</span><span class="p">(</span><span class="n">args</span><span class="p">,</span> <span class="p">[</span><span class="s">&#39;my&#39;</span><span class="p">,</span> <span class="s">&#39;list&#39;</span><span class="p">,</span> <span class="s">&#39;of&#39;</span><span class="p">,</span>
+<span class="gp">... </span>                                 <span class="s">&#39;positional&#39;</span><span class="p">,</span> <span class="s">&#39;args&#39;</span><span class="p">])</span>
+</pre></div>
+</div>
+</dd></dl>
+
+</dd></dl>
+
+</div>
+<div class="section" id="parser-class">
+<h2>Parser Class<a class="headerlink" href="#parser-class" title="Permalink to this headline">¶</a></h2>
+<dl class="class">
+<dt id="subcommand.Parser">
+<em class="property">class </em><code class="descclassname">subcommand.</code><code class="descname">Parser</code><span class="sig-paren">(</span><em>commands</em>, <em>desc=None</em><span class="sig-paren">)</span><a class="reference internal" href="_modules/subcommand.html#Parser"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#subcommand.Parser" title="Permalink to this definition">¶</a></dt>
+<dd><div class="highlight-python"><div class="highlight"><pre><span class="gp">&gt;&gt;&gt; </span><span class="n">parser</span> <span class="o">=</span> <span class="n">CommandParser</span><span class="p">([</span><span class="n">TestCommands</span><span class="p">()],</span> <span class="n">desc</span><span class="o">=</span><span class="s">&quot;&quot;</span><span class="p">)</span>
+<span class="gp">&gt;&gt;&gt; </span><span class="k">return</span> <span class="n">parser</span><span class="o">.</span><span class="n">run</span><span class="p">()</span>
+</pre></div>
+</div>
+<dl class="method">
+<dt id="subcommand.Parser.bash_completion">
+<code class="descname">bash_completion</code><span class="sig-paren">(</span><em>args</em><span class="sig-paren">)</span><a class="headerlink" href="#subcommand.Parser.bash_completion" title="Permalink to this definition">¶</a></dt>
+<dd><p>Used by the bash completion script to output completion candidates.
+The args passed by the bash completion script to this command are as
+follows:</p>
+<div class="highlight-python"><div class="highlight"><pre><span class="n">args</span> <span class="o">=</span> <span class="p">[</span><span class="s">&#39;--bash-completion&#39;</span><span class="p">,</span> <span class="s">&#39;%prog&#39;</span><span class="p">,</span> <span class="s">&#39;sub-cmd&#39;</span><span class="p">,</span> <span class="s">&#39;command&#39;</span><span class="p">]</span>
+</pre></div>
+</div>
+</dd></dl>
+
+<dl class="method">
+<dt id="subcommand.Parser.bash_completion_script">
+<code class="descname">bash_completion_script</code><span class="sig-paren">(</span><em>prog</em><span class="sig-paren">)</span><a class="headerlink" href="#subcommand.Parser.bash_completion_script" title="Permalink to this definition">¶</a></dt>
+<dd><p>Output a bash completion script to stdout. To Create a bash
+completion script on ubuntu and maybe other distros:</p>
+<div class="highlight-python"><div class="highlight"><pre>./my-script.py --bash-completion-script \
+        &gt; /etc/bash_completion.d/my-script.py
+</pre></div>
+</div>
+</dd></dl>
+
+<dl class="method">
+<dt id="subcommand.Parser.help">
+<code class="descname">help</code><span class="sig-paren">(</span><span class="sig-paren">)</span><a class="headerlink" href="#subcommand.Parser.help" title="Permalink to this definition">¶</a></dt>
+<dd><p>Print help message and exit</p>
+</dd></dl>
+
+<dl class="method">
+<dt id="subcommand.Parser.run">
+<code class="descname">run</code><span class="sig-paren">(</span><em>args=None</em>, <em>prog=None</em><span class="sig-paren">)</span><a class="headerlink" href="#subcommand.Parser.run" title="Permalink to this definition">¶</a></dt>
+<dd><p>Parse the command line arguments passed and execute the command
+requested, if no matching command is found or no argument display help
+and exit</p>
+</dd></dl>
+
+</dd></dl>
+
+</div>
+<div class="section" id="subparser-class">
+<h2>SubParser Class<a class="headerlink" href="#subparser-class" title="Permalink to this headline">¶</a></h2>
+<dl class="class">
+<dt id="subcommand.SubParser">
+<em class="property">class </em><code class="descclassname">subcommand.</code><code class="descname">SubParser</code><span class="sig-paren">(</span><em>sub_commands</em>, <em>desc=None</em><span class="sig-paren">)</span><a class="reference internal" href="_modules/subcommand.html#SubParser"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#subcommand.SubParser" title="Permalink to this definition">¶</a></dt>
+<dd><p>Collects Command() objects and parse the commandline</p>
+<div class="highlight-python"><div class="highlight"><pre><span class="gp">&gt;&gt;&gt; </span><span class="n">parser</span> <span class="o">=</span> <span class="n">SubParser</span><span class="p">([</span><span class="n">TestCommands</span><span class="p">()],</span>
+<span class="gp">... </span>                           <span class="n">desc</span><span class="o">=</span><span class="s">&quot;Test Description&quot;</span><span class="p">)</span>
+<span class="gp">&gt;&gt;&gt; </span><span class="n">parser</span><span class="o">.</span><span class="n">run</span><span class="p">([</span><span class="s">&#39;prog&#39;</span><span class="p">,</span> <span class="s">&#39;test&#39;</span><span class="p">,</span> <span class="s">&#39;command&#39;</span><span class="p">,</span>
+<span class="gp">... </span>            <span class="s">&#39;arg1&#39;</span><span class="p">,</span> <span class="s">&#39;--opt-arg&#39;</span><span class="p">,</span> <span class="s">&#39;arg2&#39;</span><span class="p">])</span>
+</pre></div>
+</div>
+<dl class="method">
+<dt id="subcommand.SubParser.bash_completion">
+<code class="descname">bash_completion</code><span class="sig-paren">(</span><em>args</em><span class="sig-paren">)</span><a class="reference internal" href="_modules/subcommand.html#SubParser.bash_completion"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#subcommand.SubParser.bash_completion" title="Permalink to this definition">¶</a></dt>
+<dd><p>Used by the bash completion script to output completion candidates.
+The args passed by the bash completion script to this command are as
+follows:</p>
+<div class="highlight-python"><div class="highlight"><pre><span class="n">args</span> <span class="o">=</span> <span class="p">[</span><span class="s">&#39;--bash-completion&#39;</span><span class="p">,</span> <span class="s">&#39;%prog&#39;</span><span class="p">,</span> <span class="s">&#39;sub-cmd&#39;</span><span class="p">,</span> <span class="s">&#39;command&#39;</span><span class="p">]</span>
+</pre></div>
+</div>
+</dd></dl>
+
+<dl class="method">
+<dt id="subcommand.SubParser.bash_completion_script">
+<code class="descname">bash_completion_script</code><span class="sig-paren">(</span><em>prog</em><span class="sig-paren">)</span><a class="reference internal" href="_modules/subcommand.html#SubParser.bash_completion_script"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#subcommand.SubParser.bash_completion_script" title="Permalink to this definition">¶</a></dt>
+<dd><p>Output a bash completion script to stdout. To Create a bash
+completion script on ubuntu and maybe other distros:</p>
+<div class="highlight-python"><div class="highlight"><pre>./my-script.py --bash-completion-script \
+        &gt; /etc/bash_completion.d/my-script.py
+</pre></div>
+</div>
+</dd></dl>
+
+<dl class="method">
+<dt id="subcommand.SubParser.help">
+<code class="descname">help</code><span class="sig-paren">(</span><span class="sig-paren">)</span><a class="reference internal" href="_modules/subcommand.html#SubParser.help"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#subcommand.SubParser.help" title="Permalink to this definition">¶</a></dt>
+<dd><p>Print help message and exit</p>
+</dd></dl>
+
+<dl class="method">
+<dt id="subcommand.SubParser.run">
+<code class="descname">run</code><span class="sig-paren">(</span><em>args=None</em>, <em>prog=None</em><span class="sig-paren">)</span><a class="reference internal" href="_modules/subcommand.html#SubParser.run"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#subcommand.SubParser.run" title="Permalink to this definition">¶</a></dt>
+<dd><p>Parse the command line arguments passed and execute the command
+requested, if no matching command is found or no argument display help
+and exit</p>
+</dd></dl>
+
+</dd></dl>
+
+</div>
+</div>
+
+
+          </div>
+        </div>
+      </div>
+      <div class="sphinxsidebar" role="navigation" aria-label="main navigation">
+        <div class="sphinxsidebarwrapper">
+  <h3><a href="#">Table Of Contents</a></h3>
+  <ul>
+<li><a class="reference internal" href="#">SubCommand CLI Parser</a><ul>
+<li><a class="reference internal" href="#installation">Installation</a></li>
+<li><a class="reference internal" href="#what-does-it-look-like">What does it look like?</a></li>
+<li><a class="reference internal" href="#can-my-commands-have-subcommands">Can my commands have subcommands?</a></li>
+<li><a class="reference internal" href="#what-if-i-have-lots-of-arguments">What if I have lots of arguments?</a></li>
+<li><a class="reference internal" href="#can-i-share-options-amongst-similar-commands">Can I share options amongst similar commands?</a></li>
+<li><a class="reference internal" href="#can-i-execute-common-code-before-each-command">Can I execute common code before each command?</a></li>
+<li><a class="reference internal" href="#does-subcommand-provide-bash-completion">Does SubCommand provide bash completion?</a></li>
+</ul>
+</li>
+<li><a class="reference internal" href="#id1">Installation</a><ul>
+<li><a class="reference internal" href="#distribute-pip">Distribute &amp; Pip</a></li>
+<li><a class="reference internal" href="#get-the-code">Get the Code</a></li>
+</ul>
+</li>
+<li><a class="reference internal" href="#module-subcommand">Developer Interface</a><ul>
+<li><a class="reference internal" href="#decorators">Decorators</a></li>
+<li><a class="reference internal" href="#commands-class">Commands Class</a></li>
+<li><a class="reference internal" href="#parser-class">Parser Class</a></li>
+<li><a class="reference internal" href="#subparser-class">SubParser Class</a></li>
+</ul>
+</li>
+</ul>
+<div class="relations">
+<h3>Related Topics</h3>
+<ul>
+  <li><a href="#">Documentation overview</a><ul>
+  </ul></li>
+</ul>
+</div>
+<div id="searchbox" style="display: none" role="search">
+  <h3>Quick search</h3>
+    <form class="search" action="search.html" method="get">
+      <input type="text" name="q" />
+      <input type="submit" value="Go" />
+      <input type="hidden" name="check_keywords" value="yes" />
+      <input type="hidden" name="area" value="default" />
+    </form>
+    <p class="searchtip" style="font-size: 90%">
+    Enter search terms or a module, class or function name.
+    </p>
+</div>
+<script type="text/javascript">$('#searchbox').show(0);</script>
+        </div>
+      </div>
+      <div class="clearer"></div>
+    </div>
+    <div class="footer">
+      &copy;2015, Derrick J. Wippler.
+      
+      |
+      Powered by <a href="http://sphinx-doc.org/">Sphinx 1.3.1</a>
+      &amp; <a href="https://github.com/bitprophet/alabaster">Alabaster 0.7.6</a>
+      
+    </div>
+
+    
+
+    
+  </body>
+</html>

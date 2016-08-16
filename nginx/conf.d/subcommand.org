@@ -1,0 +1,9 @@
+server {
+    listen 80;
+    root /usr/share/nginx/subcommand.org;
+    index index.html index.htm;
+    server_name subcommand.org www.subcommand.org;
+
+    location / {
+    }
+}

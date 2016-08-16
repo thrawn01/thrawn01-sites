@@ -1,0 +1,545 @@
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN"
+  "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd">
+
+
+<html xmlns="http://www.w3.org/1999/xhtml">
+  <head>
+    <meta http-equiv="Content-Type" content="text/html; charset=utf-8" />
+    
+    <title>subcommand &mdash; SubCommand 1.0 documentation</title>
+    
+    <link rel="stylesheet" href="../_static/alabaster.css" type="text/css" />
+    <link rel="stylesheet" href="../_static/pygments.css" type="text/css" />
+    
+    <script type="text/javascript">
+      var DOCUMENTATION_OPTIONS = {
+        URL_ROOT:    '../',
+        VERSION:     '1.0',
+        COLLAPSE_INDEX: false,
+        FILE_SUFFIX: '.html',
+        HAS_SOURCE:  true
+      };
+    </script>
+    <script type="text/javascript" src="../_static/jquery.js"></script>
+    <script type="text/javascript" src="../_static/underscore.js"></script>
+    <script type="text/javascript" src="../_static/doctools.js"></script>
+    <link rel="top" title="SubCommand 1.0 documentation" href="../index.html" />
+    <link rel="up" title="Module code" href="index.html" />
+   
+  
+  <meta name="viewport" content="width=device-width, initial-scale=0.9, maximum-scale=0.9">
+
+  </head>
+  <body role="document">  
+
+    <div class="document">
+      <div class="documentwrapper">
+        <div class="bodywrapper">
+          <div class="body" role="main">
+            
+  <h1>Source code for subcommand</h1><div class="highlight"><pre>
+<span class="c"># -*- coding: utf-8 -*-</span>
+
+
+<span class="n">__title__</span> <span class="o">=</span> <span class="s">&#39;subcommand&#39;</span>
+<span class="n">__version__</span> <span class="o">=</span> <span class="s">&#39;1.0&#39;</span>
+<span class="n">__author__</span> <span class="o">=</span> <span class="s">&#39;Derrick J. Wippler&#39;</span>
+<span class="n">__license__</span> <span class="o">=</span> <span class="s">&#39;Apache 2.0&#39;</span>
+
+
+<span class="kn">from</span> <span class="nn">argparse</span> <span class="kn">import</span> <span class="n">ArgumentParser</span><span class="p">,</span> <span class="n">RawDescriptionHelpFormatter</span>
+<span class="kn">from</span> <span class="nn">collections</span> <span class="kn">import</span> <span class="n">namedtuple</span>
+<span class="kn">from</span> <span class="nn">os.path</span> <span class="kn">import</span> <span class="n">basename</span>
+<span class="kn">from</span> <span class="nn">textwrap</span> <span class="kn">import</span> <span class="n">dedent</span>
+
+<span class="kn">import</span> <span class="nn">inspect</span>
+<span class="kn">import</span> <span class="nn">sys</span>
+<span class="kn">import</span> <span class="nn">re</span>
+
+
+<span class="n">Option</span> <span class="o">=</span> <span class="n">namedtuple</span><span class="p">(</span><span class="s">&#39;Option&#39;</span><span class="p">,</span> <span class="p">[</span><span class="s">&#39;args&#39;</span><span class="p">,</span> <span class="s">&#39;kwargs&#39;</span><span class="p">])</span>
+
+
+<div class="viewcode-block" id="opt"><a class="viewcode-back" href="../index.html#subcommand.opt">[docs]</a><span class="k">def</span> <span class="nf">opt</span><span class="p">(</span><span class="o">*</span><span class="n">args</span><span class="p">,</span> <span class="o">**</span><span class="n">kwargs</span><span class="p">):</span>
+    <span class="sd">&quot;&quot;&quot;Use this decorator to add options to a sub command method. This</span>
+<span class="sd">    decorator accepts the same arguments as `ArgumentParser.add_argument</span>
+<span class="sd">    &lt;https://docs.python.org/3/library/argparse.html#the-add-argument-method&gt;`_</span>
+
+<span class="sd">        &gt;&gt;&gt; @opt(&#39;--opt-arg&#39;, help=&quot;This is my optional arg&quot;)</span>
+<span class="sd">        &gt;&gt;&gt; @opt(&#39;pos-arg&#39;, help=&quot;This is my positional arg&quot;)</span>
+<span class="sd">        &gt;&gt;&gt; def test_sub_command(self, pos_arg=None, opt_arg=None):</span>
+<span class="sd">        &gt;&gt;&gt;   print(pos_arg, opt_arg)</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+    <span class="k">def</span> <span class="nf">decorator</span><span class="p">(</span><span class="n">method</span><span class="p">):</span>
+        <span class="k">if</span> <span class="ow">not</span> <span class="nb">hasattr</span><span class="p">(</span><span class="n">method</span><span class="p">,</span> <span class="s">&#39;options&#39;</span><span class="p">):</span>
+            <span class="n">method</span><span class="o">.</span><span class="n">options</span> <span class="o">=</span> <span class="p">[]</span>
+        <span class="k">if</span> <span class="n">args</span><span class="p">:</span>
+            <span class="c"># Append the option to our option list</span>
+            <span class="n">method</span><span class="o">.</span><span class="n">options</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">Option</span><span class="p">(</span><span class="n">args</span><span class="p">,</span> <span class="n">kwargs</span><span class="p">))</span>
+        <span class="c"># No need to wrap, only adding an attr to the method</span>
+        <span class="k">return</span> <span class="n">method</span>
+    <span class="k">return</span> <span class="n">decorator</span>
+
+</div>
+<div class="viewcode-block" id="noargs"><a class="viewcode-back" href="../index.html#subcommand.noargs">[docs]</a><span class="k">def</span> <span class="nf">noargs</span><span class="p">(</span><span class="n">method</span><span class="p">):</span>
+    <span class="sd">&quot;&quot;&quot;Use this decorator to denote the sub command has no args</span>
+
+<span class="sd">        &gt;&gt;&gt; @noargs</span>
+<span class="sd">        &gt;&gt;&gt; def test_sub_command(self):</span>
+<span class="sd">        &gt;&gt;&gt;     print(&quot;noargs subcommand&quot;)</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+    <span class="n">method</span><span class="o">.</span><span class="n">options</span> <span class="o">=</span> <span class="p">[]</span>
+    <span class="k">return</span> <span class="n">method</span>
+
+
+</div>
+<div class="viewcode-block" id="SubParser"><a class="viewcode-back" href="../index.html#subcommand.SubParser">[docs]</a><span class="k">class</span> <span class="nc">SubParser</span><span class="p">(</span><span class="nb">object</span><span class="p">):</span>
+    <span class="sd">&quot;&quot;&quot;Collects Command() objects and parse the commandline</span>
+
+<span class="sd">        &gt;&gt;&gt; parser = SubParser([TestCommands()],</span>
+<span class="sd">        ...                            desc=&quot;Test Description&quot;)</span>
+<span class="sd">        &gt;&gt;&gt; parser.run([&#39;prog&#39;, &#39;test&#39;, &#39;command&#39;,</span>
+<span class="sd">        ...             &#39;arg1&#39;, &#39;--opt-arg&#39;, &#39;arg2&#39;])</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+    <span class="k">def</span> <span class="nf">__init__</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">sub_commands</span><span class="p">,</span> <span class="n">desc</span><span class="o">=</span><span class="bp">None</span><span class="p">):</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">sub_commands</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">_build_dict</span><span class="p">(</span><span class="n">sub_commands</span><span class="p">)</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">prog</span> <span class="o">=</span> <span class="bp">None</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">desc</span> <span class="o">=</span> <span class="n">desc</span>
+
+    <span class="k">def</span> <span class="nf">_build_dict</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">sub_commands</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot;Given a list of :class:`Commands` objects return a dict mapping of</span>
+<span class="sd">        subcommand name and objects</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="n">result</span> <span class="o">=</span> <span class="p">{}</span>
+        <span class="k">for</span> <span class="n">cmd</span> <span class="ow">in</span> <span class="n">sub_commands</span><span class="p">:</span>
+            <span class="c"># If command is just an instance of &#39;object&#39;, ignore the cmd</span>
+            <span class="k">if</span> <span class="n">cmd</span><span class="o">.</span><span class="n">__class__</span><span class="o">.</span><span class="n">__name__</span> <span class="o">==</span> <span class="s">&#39;object&#39;</span><span class="p">:</span>
+                <span class="k">continue</span>
+
+            <span class="n">name</span> <span class="o">=</span> <span class="nb">getattr</span><span class="p">(</span><span class="n">cmd</span><span class="p">,</span> <span class="s">&#39;_name&#39;</span><span class="p">,</span> <span class="bp">None</span><span class="p">)</span>
+            <span class="k">if</span> <span class="ow">not</span> <span class="n">name</span><span class="p">:</span>
+                <span class="k">raise</span> <span class="ne">RuntimeError</span><span class="p">(</span>
+                    <span class="s">&quot;object &#39;</span><span class="si">%s</span><span class="s">&#39; has no attribute &#39;_name&#39;; &quot;</span>
+                    <span class="s">&quot;please give your Commands class a name&quot;</span> <span class="o">%</span> <span class="n">cmd</span>
+                <span class="p">)</span>
+            <span class="n">result</span><span class="p">[</span><span class="n">name</span><span class="p">]</span> <span class="o">=</span> <span class="n">cmd</span>
+        <span class="k">return</span> <span class="n">result</span>
+
+<div class="viewcode-block" id="SubParser.run"><a class="viewcode-back" href="../index.html#subcommand.SubParser.run">[docs]</a>    <span class="k">def</span> <span class="nf">run</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">args</span><span class="o">=</span><span class="bp">None</span><span class="p">,</span> <span class="n">prog</span><span class="o">=</span><span class="bp">None</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot;Parse the command line arguments passed and execute the command</span>
+<span class="sd">        requested, if no matching command is found or no argument display help</span>
+<span class="sd">        and exit</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="c"># use sys.argv if not supplied</span>
+        <span class="k">if</span> <span class="ow">not</span> <span class="n">args</span><span class="p">:</span>
+            <span class="n">prog</span> <span class="o">=</span> <span class="n">basename</span><span class="p">(</span><span class="n">sys</span><span class="o">.</span><span class="n">argv</span><span class="p">[</span><span class="mi">0</span><span class="p">])</span>
+            <span class="n">args</span> <span class="o">=</span> <span class="n">sys</span><span class="o">.</span><span class="n">argv</span><span class="p">[</span><span class="mi">1</span><span class="p">:]</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">prog</span> <span class="o">=</span> <span class="n">prog</span>
+
+        <span class="c"># If completion token found in args</span>
+        <span class="k">if</span> <span class="s">&#39;--bash-completion&#39;</span> <span class="ow">in</span> <span class="n">args</span><span class="p">:</span>
+            <span class="k">return</span> <span class="bp">self</span><span class="o">.</span><span class="n">bash_completion</span><span class="p">(</span><span class="n">args</span><span class="p">)</span>
+
+        <span class="c"># If bash completion script requested</span>
+        <span class="k">if</span> <span class="s">&#39;--bash-completion-script&#39;</span> <span class="ow">in</span> <span class="n">args</span><span class="p">:</span>
+            <span class="k">return</span> <span class="bp">self</span><span class="o">.</span><span class="n">bash_completion_script</span><span class="p">(</span><span class="n">prog</span><span class="p">)</span>
+
+        <span class="c"># Find a subcommand in the arguments</span>
+        <span class="k">for</span> <span class="n">index</span><span class="p">,</span> <span class="n">arg</span> <span class="ow">in</span> <span class="nb">enumerate</span><span class="p">(</span><span class="n">args</span><span class="p">):</span>
+            <span class="k">if</span> <span class="n">arg</span> <span class="ow">in</span> <span class="bp">self</span><span class="o">.</span><span class="n">sub_commands</span><span class="o">.</span><span class="n">keys</span><span class="p">():</span>
+                <span class="c"># Remove the sub command argument</span>
+                <span class="n">args</span><span class="o">.</span><span class="n">pop</span><span class="p">(</span><span class="n">index</span><span class="p">)</span>
+                <span class="c"># Run the sub-command passing the remaining arguments</span>
+                <span class="k">return</span> <span class="bp">self</span><span class="o">.</span><span class="n">sub_commands</span><span class="p">[</span><span class="n">arg</span><span class="p">](</span><span class="n">args</span><span class="p">,</span> <span class="n">prog</span><span class="p">)</span>
+
+        <span class="c"># Unable to find a suitable sub-command</span>
+        <span class="k">return</span> <span class="bp">self</span><span class="o">.</span><span class="n">help</span><span class="p">()</span>
+</div>
+<div class="viewcode-block" id="SubParser.bash_completion_script"><a class="viewcode-back" href="../index.html#subcommand.SubParser.bash_completion_script">[docs]</a>    <span class="k">def</span> <span class="nf">bash_completion_script</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">prog</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot; Output a bash completion script to stdout. To Create a bash</span>
+<span class="sd">        completion script on ubuntu and maybe other distros::</span>
+
+<span class="sd">            ./my-script.py --bash-completion-script \\</span>
+<span class="sd">                    &gt; /etc/bash_completion.d/my-script.py</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="k">print</span> <span class="s">&#39;_</span><span class="si">%(prog)s</span><span class="s">() {</span><span class="se">\n</span><span class="s">&#39;</span>\
+            <span class="s">&#39;  local cur=&quot;${COMP_WORDS[COMP_CWORD]}&quot;</span><span class="se">\n</span><span class="s">&#39;</span>\
+            <span class="s">&#39;  local list=$(</span><span class="si">%(prog)s</span><span class="s"> --bash-completion $COMP_LINE)</span><span class="se">\n</span><span class="s">&#39;</span>\
+            <span class="s">&#39;  COMPREPLY=($(compgen -W &quot;$list&quot; $cur))</span><span class="se">\n</span><span class="s">&#39;</span>\
+            <span class="s">&#39;}</span><span class="se">\n</span><span class="s">&#39;</span>\
+            <span class="s">&#39;complete -F _</span><span class="si">%(prog)s</span><span class="s"> </span><span class="si">%(prog)s</span><span class="se">\n</span><span class="s">&#39;</span> <span class="o">%</span> <span class="nb">locals</span><span class="p">()</span>
+</div>
+<div class="viewcode-block" id="SubParser.bash_completion"><a class="viewcode-back" href="../index.html#subcommand.SubParser.bash_completion">[docs]</a>    <span class="k">def</span> <span class="nf">bash_completion</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">args</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot;Used by the bash completion script to output completion candidates.</span>
+<span class="sd">        The args passed by the bash completion script to this command are as</span>
+<span class="sd">        follows::</span>
+
+<span class="sd">            args = [&#39;--bash-completion&#39;, &#39;%prog&#39;, &#39;sub-cmd&#39;, &#39;command&#39;]</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="k">try</span><span class="p">:</span>
+            <span class="c"># If a subcommand is already present</span>
+            <span class="k">if</span> <span class="n">args</span><span class="p">[</span><span class="mi">2</span><span class="p">]</span> <span class="ow">in</span> <span class="bp">self</span><span class="o">.</span><span class="n">sub_commands</span><span class="o">.</span><span class="n">keys</span><span class="p">():</span>
+                <span class="c"># Have the subcommand print out all possible commands</span>
+                <span class="k">return</span> <span class="bp">self</span><span class="o">.</span><span class="n">sub_commands</span><span class="p">[</span><span class="n">args</span><span class="p">[</span><span class="mi">2</span><span class="p">]]</span><span class="o">.</span><span class="n">bash_completion</span><span class="p">()</span>
+        <span class="k">except</span> <span class="p">(</span><span class="ne">KeyError</span><span class="p">,</span> <span class="ne">IndexError</span><span class="p">):</span>
+            <span class="k">pass</span>
+
+        <span class="c"># Print out all the possible sub command names</span>
+        <span class="k">print</span> <span class="s">&#39; &#39;</span><span class="o">.</span><span class="n">join</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">sub_commands</span><span class="o">.</span><span class="n">keys</span><span class="p">())</span>
+        <span class="k">return</span> <span class="mi">0</span>
+</div>
+<div class="viewcode-block" id="SubParser.help"><a class="viewcode-back" href="../index.html#subcommand.SubParser.help">[docs]</a>    <span class="k">def</span> <span class="nf">help</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot;Print help message and exit&quot;&quot;&quot;</span>
+        <span class="k">print</span> <span class="s">&quot;Usage: </span><span class="si">%s</span><span class="s"> &lt;command&gt; [-h]</span><span class="se">\n</span><span class="s">&quot;</span> <span class="o">%</span> <span class="bp">self</span><span class="o">.</span><span class="n">prog</span>
+        <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">desc</span><span class="p">:</span>
+            <span class="k">print</span> <span class="bp">self</span><span class="o">.</span><span class="n">desc</span> <span class="o">+</span> <span class="s">&#39;</span><span class="se">\n</span><span class="s">&#39;</span>
+
+        <span class="k">print</span> <span class="s">&quot;Available Commands:&quot;</span>
+        <span class="k">for</span> <span class="n">name</span><span class="p">,</span> <span class="n">command</span> <span class="ow">in</span> <span class="bp">self</span><span class="o">.</span><span class="n">sub_commands</span><span class="o">.</span><span class="n">iteritems</span><span class="p">():</span>
+            <span class="k">print</span> <span class="s">&quot;  &quot;</span><span class="p">,</span> <span class="n">name</span>
+            <span class="c"># TODO: Print some help message for the commands?</span>
+        <span class="k">return</span> <span class="mi">1</span>
+
+</div></div>
+<div class="viewcode-block" id="Parser"><a class="viewcode-back" href="../index.html#subcommand.Parser">[docs]</a><span class="k">class</span> <span class="nc">Parser</span><span class="p">(</span><span class="n">SubParser</span><span class="p">):</span>
+    <span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">        &gt;&gt;&gt; parser = CommandParser([TestCommands()], desc=&quot;&quot;)</span>
+<span class="sd">        &gt;&gt;&gt; return parser.run()</span>
+
+<span class="sd">    &quot;&quot;&quot;</span>
+    <span class="k">def</span> <span class="nf">__init__</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">commands</span><span class="p">,</span> <span class="n">desc</span><span class="o">=</span><span class="bp">None</span><span class="p">):</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">sub_commands</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">_build_dict</span><span class="p">(</span><span class="n">commands</span><span class="p">)</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">prog</span> <span class="o">=</span> <span class="bp">None</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">desc</span> <span class="o">=</span> <span class="n">desc</span>
+
+    <span class="k">def</span> <span class="nf">_build_dict</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">commands</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot;Given a list of :class:`Commands` objects return a dict mapping of</span>
+<span class="sd">        method names and objects</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="n">result</span> <span class="o">=</span> <span class="p">{}</span>
+        <span class="c"># get a listing of all the methods</span>
+        <span class="k">for</span> <span class="n">cmd</span> <span class="ow">in</span> <span class="n">commands</span><span class="p">:</span>
+            <span class="k">for</span> <span class="p">(</span><span class="n">name</span><span class="p">,</span> <span class="n">method</span><span class="p">)</span> <span class="ow">in</span> <span class="n">cmd</span><span class="o">.</span><span class="n">_commands</span><span class="o">.</span><span class="n">iteritems</span><span class="p">():</span>
+                <span class="n">result</span><span class="p">[</span><span class="n">name</span><span class="p">]</span> <span class="o">=</span> <span class="n">MethodWrapper</span><span class="p">(</span><span class="n">cmd</span><span class="p">,</span> <span class="n">method</span><span class="p">)</span>
+        <span class="k">return</span> <span class="n">result</span>
+
+</div>
+<div class="viewcode-block" id="Commands"><a class="viewcode-back" href="../index.html#subcommand.Commands">[docs]</a><span class="k">class</span> <span class="nc">Commands</span><span class="p">(</span><span class="nb">object</span><span class="p">):</span>
+    <span class="sd">&quot;&quot;&quot;This is where you define all the commands that are accessed via the</span>
+<span class="sd">    command line. Every command object must have a `_name` defined if used by</span>
+<span class="sd">    the :class:`SubParser`</span>
+
+<span class="sd">        &gt;&gt;&gt; class TestCommands(Commands):</span>
+<span class="sd">        ...      _name = &#39;test&#39;</span>
+<span class="sd">        ...      @opt(&#39;pos-arg&#39;, help=&quot;This is my positional arg&quot;)</span>
+<span class="sd">        ...      @opt(&#39;--opt-arg&#39;, help=&quot;This is my optional arg&quot;)</span>
+<span class="sd">        ...      def command1(self, pos_arg=None, opt_arg=None):</span>
+<span class="sd">        ...         print(&#39;cmd with opts %s, %s&#39; % pos_arg, opt_arg)</span>
+<span class="sd">        ...      @noargs</span>
+<span class="sd">        ...      def command2(self):</span>
+<span class="sd">        ...         print(&#39;cmd with no args&#39;)</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+    <span class="k">def</span> <span class="nf">__init__</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+        <span class="c"># Return a dict of all methods with the options attribute</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">_commands</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">_methods_with_opts</span><span class="p">()</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">prog</span> <span class="o">=</span> <span class="bp">None</span>
+
+<div class="viewcode-block" id="Commands.pre_command"><a class="viewcode-back" href="../index.html#subcommand.Commands.pre_command">[docs]</a>    <span class="k">def</span> <span class="nf">pre_command</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot;This method is called prior to calling the command specified via the</span>
+<span class="sd">        command line. Use it to initialize common code within your</span>
+<span class="sd">        :class:`Commands` object</span>
+
+<span class="sd">            &gt;&gt;&gt; class TestCommands(Commands):</span>
+<span class="sd">            ...      _name = &#39;test&#39;</span>
+<span class="sd">            ...      def pre_command(self):</span>
+<span class="sd">            ...         print(&quot;I get run first&quot;)</span>
+<span class="sd">            ...      @noargs</span>
+<span class="sd">            ...      def command(self):</span>
+<span class="sd">            ...         print(&quot;Run my command&quot;)</span>
+<span class="sd">            &gt;&gt;&gt; parser = SubParser([TestCommands()], desc=&quot;&quot;)</span>
+<span class="sd">            &gt;&gt;&gt; parser.run([&#39;prog&#39;, &#39;test&#39;, &#39;command&#39;])</span>
+<span class="sd">            I get run first</span>
+<span class="sd">            Run my command</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="k">pass</span>
+</div>
+<div class="viewcode-block" id="Commands.bash_completion"><a class="viewcode-back" href="../index.html#subcommand.Commands.bash_completion">[docs]</a>    <span class="k">def</span> <span class="nf">bash_completion</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot;By default returns all the commands defined for this</span>
+<span class="sd">        :class:`Commands` object. This method is invoked when --bash-completion</span>
+<span class="sd">        is called for a specific subcommand. This can be overidden by the</span>
+<span class="sd">        implementor to return custom behaivor &quot;&quot;&quot;</span>
+        <span class="k">print</span> <span class="s">&#39; &#39;</span><span class="o">.</span><span class="n">join</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">_commands</span><span class="o">.</span><span class="n">keys</span><span class="p">()),</span>
+        <span class="k">return</span> <span class="mi">0</span>
+</div>
+<div class="viewcode-block" id="Commands.remove"><a class="viewcode-back" href="../index.html#subcommand.Commands.remove">[docs]</a>    <span class="k">def</span> <span class="nf">remove</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">haystack</span><span class="p">,</span> <span class="n">needles</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot;This method eliminates un-wanted keyword arguments</span>
+
+<span class="sd">            &gt;&gt;&gt; if args[&#39;debug&#39;]:</span>
+<span class="sd">            &gt;&gt;&gt;     print &quot;print debug output&quot;</span>
+<span class="sd">            &gt;&gt;&gt; # Remove the debug and verbose keys</span>
+<span class="sd">            &gt;&gt;&gt; kwargs = self.remove(args, [&#39;verbose&#39;, &#39;debug&#39;])</span>
+<span class="sd">            &gt;&gt;&gt; self.call_some_method(**kwargs)</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="n">result</span> <span class="o">=</span> <span class="p">{}</span>
+        <span class="k">for</span> <span class="n">key</span><span class="p">,</span> <span class="n">value</span> <span class="ow">in</span> <span class="n">haystack</span><span class="o">.</span><span class="n">items</span><span class="p">():</span>
+            <span class="k">if</span> <span class="n">key</span> <span class="ow">not</span> <span class="ow">in</span> <span class="n">needles</span><span class="p">:</span>
+                <span class="n">result</span><span class="p">[</span><span class="n">key</span><span class="p">]</span> <span class="o">=</span> <span class="n">value</span>
+        <span class="k">return</span> <span class="n">result</span>
+</div>
+<div class="viewcode-block" id="Commands.split"><a class="viewcode-back" href="../index.html#subcommand.Commands.split">[docs]</a>    <span class="k">def</span> <span class="nf">split</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">args</span><span class="p">,</span> <span class="n">positionals</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot;Splits keys specified into separate lists, this method is commonly</span>
+<span class="sd">        used to split positional arguments from keyword arguments</span>
+
+<span class="sd">            &gt;&gt;&gt; args, kwargs = self.split(args, [&#39;my&#39;, &#39;list&#39;, &#39;of&#39;,</span>
+<span class="sd">            ...                                  &#39;positional&#39;, &#39;args&#39;])</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="n">kwargs</span> <span class="o">=</span> <span class="n">args</span><span class="o">.</span><span class="n">copy</span><span class="p">()</span>
+        <span class="n">args</span> <span class="o">=</span> <span class="p">{}</span>
+        <span class="k">for</span> <span class="n">key</span><span class="p">,</span> <span class="n">value</span> <span class="ow">in</span> <span class="n">kwargs</span><span class="o">.</span><span class="n">items</span><span class="p">():</span>
+            <span class="c"># Split out the positional args from the kwargs</span>
+            <span class="k">if</span> <span class="n">key</span> <span class="ow">in</span> <span class="n">positionals</span><span class="p">:</span>
+                <span class="k">del</span> <span class="n">kwargs</span><span class="p">[</span><span class="n">key</span><span class="p">]</span>
+                <span class="n">args</span><span class="p">[</span><span class="n">key</span><span class="p">]</span> <span class="o">=</span> <span class="n">value</span>
+            <span class="c"># Remove the kwarg if its None, this allows</span>
+            <span class="c"># python default values to work properly</span>
+            <span class="k">if</span> <span class="n">value</span> <span class="ow">is</span> <span class="bp">None</span><span class="p">:</span>
+                <span class="k">del</span> <span class="n">kwargs</span><span class="p">[</span><span class="n">key</span><span class="p">]</span>
+        <span class="k">return</span> <span class="p">(</span><span class="n">args</span><span class="p">,</span> <span class="n">kwargs</span><span class="p">)</span>
+</div>
+<div class="viewcode-block" id="Commands.opt"><a class="viewcode-back" href="../index.html#subcommand.Commands.opt">[docs]</a>    <span class="k">def</span> <span class="nf">opt</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="o">*</span><span class="n">args</span><span class="p">,</span> <span class="o">**</span><span class="n">kwargs</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot;Use this method to define :class:`Commands` options that are common to each</span>
+<span class="sd">        command</span>
+
+<span class="sd">        &gt;&gt;&gt; class TestCommands(Commands):</span>
+<span class="sd">        ...      _name = &#39;test&#39;</span>
+<span class="sd">        ...      def __init__(self):</span>
+<span class="sd">        ...         self.opt(&#39;-d&#39;, &#39;--debug&#39;, action=&#39;store_const&#39;,</span>
+<span class="sd">        ...                  const=True, default=False,</span>
+<span class="sd">        ...                  help=&quot;Print debug to stdout&quot;)</span>
+<span class="sd">        ...      @noargs</span>
+<span class="sd">        ...      def command1(self):</span>
+<span class="sd">        ...         print(self.debug)</span>
+<span class="sd">        ...      @noargs</span>
+<span class="sd">        ...      def command2(self):</span>
+<span class="sd">        ...         print(self.debug)</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="k">if</span> <span class="ow">not</span> <span class="nb">hasattr</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="s">&#39;globals&#39;</span><span class="p">):</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">globals</span> <span class="o">=</span> <span class="p">[]</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">globals</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">Option</span><span class="p">(</span><span class="n">args</span><span class="p">,</span> <span class="n">kwargs</span><span class="p">))</span>
+</div>
+    <span class="k">def</span> <span class="nf">_methods_with_opts</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot;Collect all the methods in this object that have options and return</span>
+<span class="sd">        a dict with the converted name and method &quot;&quot;&quot;</span>
+        <span class="n">result</span> <span class="o">=</span> <span class="p">{}</span>
+        <span class="c"># get a listing of all the methods</span>
+        <span class="k">for</span> <span class="n">name</span> <span class="ow">in</span> <span class="nb">dir</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+            <span class="k">if</span> <span class="n">name</span><span class="o">.</span><span class="n">startswith</span><span class="p">(</span><span class="s">&#39;__&#39;</span><span class="p">):</span>
+                <span class="k">continue</span>
+            <span class="n">method</span> <span class="o">=</span> <span class="nb">getattr</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">name</span><span class="p">)</span>
+            <span class="c"># If the method has an options attribute</span>
+            <span class="k">if</span> <span class="nb">hasattr</span><span class="p">(</span><span class="n">method</span><span class="p">,</span> <span class="s">&#39;options&#39;</span><span class="p">):</span>
+                <span class="n">name</span> <span class="o">=</span> <span class="n">re</span><span class="o">.</span><span class="n">sub</span><span class="p">(</span><span class="s">&#39;_&#39;</span><span class="p">,</span> <span class="s">&#39;-&#39;</span><span class="p">,</span> <span class="n">name</span><span class="p">)</span>
+                <span class="n">result</span><span class="p">[</span><span class="n">name</span><span class="p">]</span> <span class="o">=</span> <span class="n">method</span>
+        <span class="k">return</span> <span class="n">result</span>
+
+    <span class="k">def</span> <span class="nf">_call_method</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">args</span><span class="p">,</span> <span class="n">method</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot;Given a method and the remaining arguments call the method&quot;&quot;&quot;</span>
+        <span class="c"># Parse the arguments</span>
+        <span class="n">args</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">_parse_args</span><span class="p">(</span><span class="n">method</span><span class="p">,</span> <span class="n">args</span><span class="p">)</span>
+        <span class="c"># Determine the acceptable arguments</span>
+        <span class="p">(</span><span class="n">kwargs</span><span class="p">,</span> <span class="n">unused</span><span class="p">)</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">_acceptable_args</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">_get_args</span><span class="p">(</span><span class="n">method</span><span class="p">),</span>
+                                                <span class="n">args</span><span class="p">)</span>
+        <span class="c"># Attach the unused options as class variables</span>
+        <span class="k">for</span> <span class="n">key</span><span class="p">,</span> <span class="n">value</span> <span class="ow">in</span> <span class="n">unused</span><span class="o">.</span><span class="n">items</span><span class="p">():</span>
+            <span class="c"># Don&#39;t overwrite a method or some such</span>
+            <span class="k">if</span> <span class="ow">not</span> <span class="nb">hasattr</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">key</span><span class="p">):</span>
+                <span class="nb">setattr</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">key</span><span class="p">,</span> <span class="n">value</span><span class="p">)</span>
+
+        <span class="c"># If all args are rolled into &#39;args&#39; the user should still</span>
+        <span class="c"># expect to find the args attached to the class</span>
+        <span class="k">if</span> <span class="nb">len</span><span class="p">(</span><span class="n">kwargs</span><span class="p">)</span> <span class="o">==</span> <span class="mi">1</span> <span class="ow">and</span> <span class="s">&#39;args&#39;</span> <span class="ow">in</span> <span class="n">kwargs</span><span class="p">:</span>
+            <span class="k">for</span> <span class="n">key</span><span class="p">,</span> <span class="n">value</span> <span class="ow">in</span> <span class="n">kwargs</span><span class="p">[</span><span class="s">&#39;args&#39;</span><span class="p">]</span><span class="o">.</span><span class="n">items</span><span class="p">():</span>
+                <span class="c"># Don&#39;t overwrite a method or some such</span>
+                <span class="k">if</span> <span class="ow">not</span> <span class="nb">hasattr</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">key</span><span class="p">):</span>
+                    <span class="nb">setattr</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">key</span><span class="p">,</span> <span class="n">value</span><span class="p">)</span>
+
+        <span class="c"># Call the pre_command method now that args have been parsed</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">pre_command</span><span class="p">()</span>
+        <span class="c"># Call the command with the command</span>
+        <span class="c"># line args as method arguments</span>
+        <span class="k">return</span> <span class="n">method</span><span class="p">(</span><span class="o">**</span><span class="n">kwargs</span><span class="p">)</span>
+
+    <span class="k">def</span> <span class="nf">__call__</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">args</span><span class="p">,</span> <span class="n">prog</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot; Figure out which command this sub-command should be run then pass</span>
+<span class="sd">        the arguments to the commands parser</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">prog</span> <span class="o">=</span> <span class="n">prog</span>
+        <span class="k">for</span> <span class="n">index</span><span class="p">,</span> <span class="n">arg</span> <span class="ow">in</span> <span class="nb">enumerate</span><span class="p">(</span><span class="n">args</span><span class="p">):</span>
+            <span class="c"># Find a command in the arguments</span>
+            <span class="k">if</span> <span class="n">arg</span> <span class="ow">in</span> <span class="bp">self</span><span class="o">.</span><span class="n">_commands</span><span class="o">.</span><span class="n">keys</span><span class="p">():</span>
+                <span class="c"># Get the method for the command</span>
+                <span class="n">method</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">_commands</span><span class="p">[</span><span class="n">arg</span><span class="p">]</span>
+                <span class="c"># Remove the command from the args</span>
+                <span class="n">args</span><span class="o">.</span><span class="n">pop</span><span class="p">(</span><span class="n">index</span><span class="p">)</span>
+                <span class="c"># Call the method with the remaining arguments</span>
+                <span class="k">return</span> <span class="bp">self</span><span class="o">.</span><span class="n">_call_method</span><span class="p">(</span><span class="n">args</span><span class="p">,</span> <span class="n">method</span><span class="p">)</span>
+
+        <span class="c"># Unable to find the command</span>
+        <span class="k">return</span> <span class="bp">self</span><span class="o">.</span><span class="n">help</span><span class="p">()</span>
+
+    <span class="k">def</span> <span class="nf">_parse_args</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">method</span><span class="p">,</span> <span class="n">args</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot;Using `ArgumentParser</span>
+<span class="sd">        &lt;https://docs.python.org/3/library/argparse.html&gt;`_</span>
+<span class="sd">        parse the command line arguments and return the name of the</span>
+<span class="sd">        subcommand requested</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="c"># create an argument parser</span>
+        <span class="n">parser</span> <span class="o">=</span> <span class="n">ArgumentParser</span><span class="p">(</span><span class="n">prog</span><span class="o">=</span><span class="n">method</span><span class="o">.</span><span class="n">__name__</span><span class="p">,</span>
+                                <span class="n">description</span><span class="o">=</span><span class="n">dedent</span><span class="p">(</span><span class="n">method</span><span class="o">.</span><span class="n">__doc__</span> <span class="ow">or</span> <span class="s">&#39;&#39;</span><span class="p">),</span>
+                                <span class="n">formatter_class</span><span class="o">=</span><span class="n">RawDescriptionHelpFormatter</span><span class="p">)</span>
+        <span class="c"># Add method options to the subparser</span>
+        <span class="k">for</span> <span class="n">opt</span> <span class="ow">in</span> <span class="n">method</span><span class="o">.</span><span class="n">options</span><span class="p">:</span>
+            <span class="n">parser</span><span class="o">.</span><span class="n">add_argument</span><span class="p">(</span><span class="o">*</span><span class="n">opt</span><span class="o">.</span><span class="n">args</span><span class="p">,</span> <span class="o">**</span><span class="n">opt</span><span class="o">.</span><span class="n">kwargs</span><span class="p">)</span>
+        <span class="c"># Add global options to the subparser</span>
+
+        <span class="k">if</span> <span class="nb">hasattr</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="s">&#39;globals&#39;</span><span class="p">):</span>
+            <span class="k">for</span> <span class="n">opt</span> <span class="ow">in</span> <span class="bp">self</span><span class="o">.</span><span class="n">globals</span><span class="p">:</span>
+                <span class="n">parser</span><span class="o">.</span><span class="n">add_argument</span><span class="p">(</span><span class="o">*</span><span class="n">opt</span><span class="o">.</span><span class="n">args</span><span class="p">,</span> <span class="o">**</span><span class="n">opt</span><span class="o">.</span><span class="n">kwargs</span><span class="p">)</span>
+
+        <span class="n">results</span> <span class="o">=</span> <span class="p">{}</span>
+        <span class="n">args</span> <span class="o">=</span> <span class="nb">vars</span><span class="p">(</span><span class="n">parser</span><span class="o">.</span><span class="n">parse_args</span><span class="p">(</span><span class="n">args</span><span class="p">))</span>
+        <span class="c"># Convert dashes to underscore</span>
+        <span class="k">for</span> <span class="n">key</span><span class="p">,</span> <span class="n">value</span> <span class="ow">in</span> <span class="n">args</span><span class="o">.</span><span class="n">items</span><span class="p">():</span>
+            <span class="n">results</span><span class="p">[</span><span class="n">re</span><span class="o">.</span><span class="n">sub</span><span class="p">(</span><span class="s">&#39;-&#39;</span><span class="p">,</span> <span class="s">&#39;_&#39;</span><span class="p">,</span> <span class="n">key</span><span class="p">)]</span> <span class="o">=</span> <span class="n">value</span>
+        <span class="k">return</span> <span class="n">results</span>
+
+<div class="viewcode-block" id="Commands.help"><a class="viewcode-back" href="../index.html#subcommand.Commands.help">[docs]</a>    <span class="k">def</span> <span class="nf">help</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot;Print a help message with a list of available commands to choose</span>
+<span class="sd">        from and return</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="k">print</span> <span class="s">&quot;Usage: </span><span class="si">%s</span><span class="s"> </span><span class="si">%s</span><span class="s"> &lt;command&gt; [-h]</span><span class="se">\n</span><span class="s">&quot;</span> <span class="o">%</span> <span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">prog</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">_name</span><span class="p">)</span>
+        <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">__doc__</span><span class="p">:</span>
+            <span class="n">stripped</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">__doc__</span><span class="o">.</span><span class="n">strip</span><span class="p">(</span><span class="s">&#39;</span><span class="se">\n</span><span class="s">| &#39;</span><span class="p">)</span>
+            <span class="k">print</span> <span class="n">re</span><span class="o">.</span><span class="n">sub</span><span class="p">(</span><span class="s">&#39; &#39;</span> <span class="o">*</span> <span class="mi">4</span><span class="p">,</span> <span class="s">&#39;&#39;</span><span class="p">,</span> <span class="n">stripped</span><span class="p">)</span>
+
+        <span class="k">print</span> <span class="s">&quot;</span><span class="se">\n</span><span class="s">Available Commands:&quot;</span>
+        <span class="k">for</span> <span class="n">name</span><span class="p">,</span> <span class="n">command</span> <span class="ow">in</span> <span class="bp">self</span><span class="o">.</span><span class="n">_commands</span><span class="o">.</span><span class="n">iteritems</span><span class="p">():</span>
+            <span class="k">print</span> <span class="s">&quot;  &quot;</span><span class="p">,</span> <span class="n">name</span>
+            <span class="c"># print &quot;  &quot;, command.__doc__.strip(&#39;\n&#39;)</span>
+        <span class="k">return</span> <span class="mi">1</span>
+</div>
+    <span class="k">def</span> <span class="nf">_get_args</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">func</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot;Get the arguments of a method and return it as a dictionary with</span>
+<span class="sd">        the supplied defaults, method arguments with no default are assigned</span>
+<span class="sd">        None &quot;&quot;&quot;</span>
+        <span class="k">def</span> <span class="nf">reverse</span><span class="p">(</span><span class="n">iterable</span><span class="p">):</span>
+            <span class="k">if</span> <span class="n">iterable</span><span class="p">:</span>
+                <span class="n">iterable</span> <span class="o">=</span> <span class="nb">list</span><span class="p">(</span><span class="n">iterable</span><span class="p">)</span>
+                <span class="k">while</span> <span class="nb">len</span><span class="p">(</span><span class="n">iterable</span><span class="p">):</span>
+                    <span class="k">yield</span> <span class="n">iterable</span><span class="o">.</span><span class="n">pop</span><span class="p">()</span>
+
+        <span class="n">args</span><span class="p">,</span> <span class="n">varargs</span><span class="p">,</span> <span class="n">varkw</span><span class="p">,</span> <span class="n">defaults</span> <span class="o">=</span> <span class="n">inspect</span><span class="o">.</span><span class="n">getargspec</span><span class="p">(</span><span class="n">func</span><span class="p">)</span>
+        <span class="n">result</span> <span class="o">=</span> <span class="p">{}</span>
+        <span class="k">for</span> <span class="n">default</span> <span class="ow">in</span> <span class="n">reverse</span><span class="p">(</span><span class="n">defaults</span><span class="p">):</span>
+            <span class="n">result</span><span class="p">[</span><span class="n">args</span><span class="o">.</span><span class="n">pop</span><span class="p">()]</span> <span class="o">=</span> <span class="n">default</span>
+
+        <span class="k">for</span> <span class="n">arg</span> <span class="ow">in</span> <span class="n">reverse</span><span class="p">(</span><span class="n">args</span><span class="p">):</span>
+            <span class="k">if</span> <span class="n">arg</span> <span class="o">==</span> <span class="s">&#39;self&#39;</span><span class="p">:</span>
+                <span class="k">continue</span>
+            <span class="n">result</span><span class="p">[</span><span class="n">arg</span><span class="p">]</span> <span class="o">=</span> <span class="bp">None</span>
+
+        <span class="k">return</span> <span class="n">result</span>
+
+    <span class="k">def</span> <span class="nf">_acceptable_args</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">_to</span><span class="p">,</span> <span class="n">_from</span><span class="p">):</span>
+        <span class="n">_other</span> <span class="o">=</span> <span class="p">{}</span>
+        <span class="c"># If the method has a variable called &#39;args&#39;</span>
+        <span class="c"># then assign all the arguments to &#39;args&#39;</span>
+        <span class="k">if</span> <span class="s">&#39;args&#39;</span> <span class="ow">in</span> <span class="n">_to</span><span class="p">:</span>
+            <span class="n">_to</span><span class="p">[</span><span class="s">&#39;args&#39;</span><span class="p">]</span> <span class="o">=</span> <span class="n">_from</span>
+            <span class="k">return</span> <span class="p">(</span><span class="n">_to</span><span class="p">,</span> <span class="p">{})</span>
+
+        <span class="c"># Collect arguments that will not</span>
+        <span class="c"># be passed into the method</span>
+        <span class="k">for</span> <span class="n">key</span><span class="p">,</span> <span class="n">value</span> <span class="ow">in</span> <span class="n">_from</span><span class="o">.</span><span class="n">items</span><span class="p">():</span>
+            <span class="k">if</span> <span class="n">key</span> <span class="ow">not</span> <span class="ow">in</span> <span class="n">_to</span><span class="p">:</span>
+                <span class="n">_other</span><span class="p">[</span><span class="n">key</span><span class="p">]</span> <span class="o">=</span> <span class="n">_from</span><span class="p">[</span><span class="n">key</span><span class="p">]</span>
+
+        <span class="c"># Collect arguments that will be</span>
+        <span class="c"># passed to the method</span>
+        <span class="k">for</span> <span class="n">key</span><span class="p">,</span> <span class="n">value</span> <span class="ow">in</span> <span class="n">_to</span><span class="o">.</span><span class="n">items</span><span class="p">():</span>
+            <span class="k">if</span> <span class="n">key</span> <span class="ow">in</span> <span class="n">_from</span><span class="p">:</span>
+                <span class="n">_to</span><span class="p">[</span><span class="n">key</span><span class="p">]</span> <span class="o">=</span> <span class="n">_from</span><span class="p">[</span><span class="n">key</span><span class="p">]</span>
+            <span class="c"># Remove arguments that have no value this allows</span>
+            <span class="c"># default values on the method signature to take effect</span>
+            <span class="k">if</span> <span class="n">_to</span><span class="p">[</span><span class="n">key</span><span class="p">]</span> <span class="ow">is</span> <span class="bp">None</span><span class="p">:</span>
+                <span class="k">del</span> <span class="n">_to</span><span class="p">[</span><span class="n">key</span><span class="p">]</span>
+        <span class="k">return</span> <span class="p">(</span><span class="n">_to</span><span class="p">,</span> <span class="n">_other</span><span class="p">)</span>
+
+</div>
+<span class="k">class</span> <span class="nc">MethodWrapper</span><span class="p">(</span><span class="n">Commands</span><span class="p">):</span>
+    <span class="sd">&quot;&quot;&quot;Wrap :class:`Commands` so it can be passed to the</span>
+<span class="sd">    :class:`CommandParser`&quot;&quot;&quot;</span>
+
+    <span class="k">def</span> <span class="nf">__init__</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">cmd</span><span class="p">,</span> <span class="n">method</span><span class="p">):</span>
+        <span class="c"># Copy over all the attr of the cmd class</span>
+        <span class="c"># since we are taking it&#39;s place</span>
+        <span class="k">for</span> <span class="n">name</span> <span class="ow">in</span> <span class="nb">dir</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+            <span class="k">if</span> <span class="n">name</span><span class="o">.</span><span class="n">startswith</span><span class="p">(</span><span class="s">&#39;__&#39;</span><span class="p">):</span>
+                <span class="k">continue</span>
+            <span class="nb">setattr</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">name</span><span class="p">,</span> <span class="nb">getattr</span><span class="p">(</span><span class="n">cmd</span><span class="p">,</span> <span class="n">name</span><span class="p">))</span>
+        <span class="c"># Overide the commands, since we only</span>
+        <span class="c"># want to execute 1 method</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">_commands</span> <span class="o">=</span> <span class="n">method</span>
+
+    <span class="k">def</span> <span class="nf">__call__</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">args</span><span class="p">,</span> <span class="n">prog</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot;Figure out which command for this sub-command should be run then</span>
+<span class="sd">        pass the arguments to the commands parser</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">prog</span> <span class="o">=</span> <span class="n">prog</span>
+        <span class="k">return</span> <span class="bp">self</span><span class="o">.</span><span class="n">_call_method</span><span class="p">(</span><span class="n">args</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">_commands</span><span class="p">)</span>
+</pre></div>
+
+          </div>
+        </div>
+      </div>
+      <div class="sphinxsidebar" role="navigation" aria-label="main navigation">
+        <div class="sphinxsidebarwrapper"><div class="relations">
+<h3>Related Topics</h3>
+<ul>
+  <li><a href="../index.html">Documentation overview</a><ul>
+  <li><a href="index.html">Module code</a><ul>
+  </ul></li>
+  </ul></li>
+</ul>
+</div>
+<div id="searchbox" style="display: none" role="search">
+  <h3>Quick search</h3>
+    <form class="search" action="../search.html" method="get">
+      <input type="text" name="q" />
+      <input type="submit" value="Go" />
+      <input type="hidden" name="check_keywords" value="yes" />
+      <input type="hidden" name="area" value="default" />
+    </form>
+    <p class="searchtip" style="font-size: 90%">
+    Enter search terms or a module, class or function name.
+    </p>
+</div>
+<script type="text/javascript">$('#searchbox').show(0);</script>
+        </div>
+      </div>
+      <div class="clearer"></div>
+    </div>
+    <div class="footer">
+      &copy;2015, Derrick J. Wippler.
+      
+      |
+      Powered by <a href="http://sphinx-doc.org/">Sphinx 1.3.1</a>
+      &amp; <a href="https://github.com/bitprophet/alabaster">Alabaster 0.7.6</a>
+      
+    </div>
+
+    
+
+    
+  </body>
+</html>
