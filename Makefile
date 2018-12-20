@@ -9,7 +9,7 @@ build:
 run: build
 	@echo "Running Image on port 1313"
 	-docker rm thrawn01-sites
-	docker run -p 1313:80 --name thrawn01-sites thrawn01/thrawn01-sites:latest
+	docker run -p 80:80 --name thrawn01-sites thrawn01/thrawn01-sites:latest
 
 publish: build
 	docker push ${DOCKER_REPO}/thrawn01-sites:latest
